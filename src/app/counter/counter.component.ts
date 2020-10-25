@@ -1,6 +1,6 @@
 import { Component, OnDestroy } from '@angular/core';
 import { interval, Subject, Subscription, merge, NEVER } from 'rxjs';
-import { switchMap, mapTo } from "rxjs/operators";
+import { switchMap, mapTo, scan } from "rxjs/operators";
 
 interface CounterState {
   isTicking: boolean;
@@ -57,10 +57,11 @@ export class CounterComponent implements OnDestroy {
       .pipe(
         switchMap(isTicking => {
           return isTicking ? interval(this.initialCounterState.tickSpeed) : NEVER
-        })
+        }),
+        scan(acc => acc + this.initialCounterState.countDiff, this.count)
       )
       .subscribe(
-        _ => this.count = this.count + this.initialCounterState.countDiff
+        value => this.count = value
       )
     );
   }
