@@ -1,5 +1,5 @@
 import { Component, OnDestroy } from '@angular/core';
-import { merge, NEVER, Subject, Subscription, timer } from 'rxjs';
+import { BehaviorSubject, merge, NEVER, Observable, Subject, Subscription, timer } from 'rxjs';
 import { mapTo, switchMap, withLatestFrom } from "rxjs/operators";
 
 interface CounterState {
@@ -40,33 +40,41 @@ export class CounterComponent implements OnDestroy {
     countDiff: 1
   };
 
-  btnStart: Subject<Event> = new Subject<Event>();
-  btnPause: Subject<Event> = new Subject<Event>();
-  btnSetTo: Subject<Event> = new Subject<Event>();
+  btnStart = new Subject<Event>();
+  btnPause = new Subject<Event>();
+  btnSetTo = new Subject<Event>();
   inputSetTo = new Subject<number>();
-  btnReset: Subject<Event> = new Subject<Event>();
+  btnReset = new Subject<Event>();
+  counterDirection = new BehaviorSubject<boolean>(true);
 
   setValue = this.btnSetTo.pipe(withLatestFrom(this.inputSetTo, (_, setTo) => setTo));
   resetValue = this.btnReset.pipe(mapTo({...this.initialCounterState}));
 
   subscription = new Subscription();
   count = 0;
+  count$: Observable<number>;
 
   constructor() {
-    this.subscription.add(
-      merge(
-        this.btnStart.pipe(mapTo(true)),
-        this.btnPause.pipe(mapTo(false))
-      )
-      .pipe(
-        switchMap(isTicking => {
-          return isTicking ? timer(0, this.initialCounterState.tickSpeed) : NEVER
-        })
-      )
-      .subscribe(
-        _ => this.count = this.count + this.initialCounterState.countDiff
-      )
+    const sub1 = merge(
+      this.btnStart.pipe(mapTo(true)),
+      this.btnPause.pipe(mapTo(false))
+    )
+    .pipe(
+      switchMap(isTicking => {
+        return isTicking ? timer(0, this.initialCounterState.tickSpeed) : NEVER
+      }),
+      withLatestFrom(this.counterDirection, (count, direction) => {
+        return { count, direction };
+      })
+    )
+    .subscribe(
+      value => {
+        const diff = this.initialCounterState.countDiff * (value.direction ? 1 : -1);
+        this.count = this.count + diff
+      }
     );
+
+    this.subscription.add(sub1);
 
     this.subscription.add(
       this.setValue.subscribe(
