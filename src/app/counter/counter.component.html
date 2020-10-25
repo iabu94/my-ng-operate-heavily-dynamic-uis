@@ -63,7 +63,8 @@
 </label>
 <input id="{{elementIds.InputTickSpeed}}"
   type="number" min=0
-  value="{{initialCounterState.tickSpeed}}"/>
+  value="{{initialCounterState.tickSpeed}}"
+  (input)="tickSpeed.next(getInputValue($event))"/>
 
 <label>
   Count Diff

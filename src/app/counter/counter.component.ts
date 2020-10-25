@@ -46,6 +46,7 @@ export class CounterComponent implements OnDestroy {
   inputSetTo = new Subject<number>();
   btnReset = new Subject<Event>();
   counterDirection = new BehaviorSubject<boolean>(true);
+  tickSpeed = new BehaviorSubject<number>(this.initialCounterState.tickSpeed);
 
   setValue = this.btnSetTo.pipe(withLatestFrom(this.inputSetTo, (_, setTo) => setTo));
   resetValue = this.btnReset.pipe(mapTo({...this.initialCounterState}));
@@ -55,16 +56,18 @@ export class CounterComponent implements OnDestroy {
   count$: Observable<number>;
 
   constructor() {
-    const sub1 = merge(
+
+    this.subscription.add(merge(
       this.btnStart.pipe(mapTo(true)),
       this.btnPause.pipe(mapTo(false))
     )
     .pipe(
-      switchMap(isTicking => {
-        return isTicking ? timer(0, this.initialCounterState.tickSpeed) : NEVER
+      withLatestFrom(this.tickSpeed, (isTicking, tickSpeed) => {
+        return isTicking ? timer(0, tickSpeed) : NEVER
       }),
-      withLatestFrom(this.counterDirection, (count, direction) => {
-        return { count, direction };
+      switchMap(value => value),
+      withLatestFrom(this.counterDirection, (_, direction) => {
+        return { direction };
       })
     )
     .subscribe(
@@ -72,9 +75,8 @@ export class CounterComponent implements OnDestroy {
         const diff = this.initialCounterState.countDiff * (value.direction ? 1 : -1);
         this.count = this.count + diff
       }
+    )
     );
-
-    this.subscription.add(sub1);
 
     this.subscription.add(
       this.setValue.subscribe(
