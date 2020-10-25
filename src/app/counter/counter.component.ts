@@ -1,5 +1,6 @@
-import {Component, OnDestroy} from '@angular/core';
-import {NEVER, Subject, Subscription} from 'rxjs';
+import { Component, OnDestroy } from '@angular/core';
+import { interval, Subject, Subscription } from 'rxjs';
+import { switchMap } from "rxjs/operators";
 
 interface CounterState {
   isTicking: boolean;
@@ -44,17 +45,19 @@ export class CounterComponent implements OnDestroy {
   btnSetTo: Subject<Event> = new Subject<Event>();
   inputSetTo: Subject<Event> = new Subject<Event>();
 
-  subscription: Subscription;
+  subscription = new Subscription();
   count = 0;
 
   constructor() {
-    /* Replace never with your code */
-    this.subscription = NEVER
-      .subscribe(
-        (next) => {
-          /* */
-        }
-      );
+    this.subscription.add(
+      this.btnStart.pipe(
+        switchMap(_ => {
+          return interval(this.initialCounterState.tickSpeed)
+        })
+      ).subscribe(
+        _ => this.count = this.count + this.initialCounterState.countDiff
+      )
+    );
   }
 
   ngOnDestroy(): void {
